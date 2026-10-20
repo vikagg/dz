@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Кроссворд: Безопасность России начинается с нас</title>
+<style>
+  *{box-sizing:border-box;font-family:'Segoe UI',Roboto,system-ui,sans-serif;-webkit-tap-highlight-color:transparent;}
+  body{background:linear-gradient(145deg,#1b3b5c,#2a5f7a);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:12px;margin:0;}
+  .container{background:#fff;border-radius:24px;padding:18px;box-shadow:0 20px 40px rgba(0,0,0,.45);max-width:1150px;width:100%;}
+  h1{text-align:center;margin:0 0 4px;font-size:1.4rem;color:#0e2a3b;line-height:1.2;}
+  .subhead{text-align:center;color:#2d5f7a;font-style:italic;margin-bottom:16px;border-bottom:2px dashed #9bb7c7;padding-bottom:8px;font-size:.85rem;}
+  
+  .game-area{display:flex;gap:24px;justify-content:center;align-items:flex-start;}
+  .grid-wrapper{background:#e3eef6;padding:8px;border-radius:14px;box-shadow:inset 0 0 0 2px #fff,0 6px 14px -6px #1f3f55;display:flex;justify-content:flex-start;overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch;}
+  
+  .crossword-grid{display:grid;gap:1px;background:#8fb0c6;padding:2px;border-radius:4px;flex-shrink:0;}
+  .cell{width:30px;height:30px;background:#fff;border-radius:2px;position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .cell.black{background:#132c3d;border-radius:2px;}
+  .cell input{width:100%;height:100%;border:none;background:transparent;text-align:center;font-size:1rem;font-weight:700;color:#0d2c3f;text-transform:uppercase;outline:none;padding:0;font-family:inherit;}
+  .cell input:focus{background:#fff3cf;box-shadow:inset 0 0 0 2px #f0b429;border-radius:2px;}
+  .number-badge{position:absolute;top:0px;left:1px;font-size:.55rem;font-weight:700;color:#2b6a8a;pointer-events:none;line-height:1;}
+  
+  .clues{display:flex;flex-direction:column;gap:12px;min-width:260px;max-width:360px;}
+  .clue-section{background:#f1f6fa;border-radius:12px;padding:10px 14px;border-left:4px solid #2d7a9e;}
+  .clue-section h3{margin:0 0 8px;color:#174257;font-size:.95rem;}
+  .clue-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:5px;}
+  .clue-list li{font-size:.8rem;color:#1e3b4b;display:flex;gap:6px;line-height:1.3;}
+  .clue-num{font-weight:800;color:#0c4e6b;min-width:18px;flex-shrink:0;}
+  
+  .buttons{display:flex;gap:10px;margin-top:18px;justify-content:center;flex-wrap:wrap;}
+  .btn{border:none;border-radius:50px;padding:12px 24px;font-size:.95rem;font-weight:700;cursor:pointer;transition:.15s;background:#fff;color:#1a4b63;box-shadow:0 5px 0 #0b2a3a;border:1px solid #b8d0df;min-height:48px;min-width:120px;touch-action:manipulation;}
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #0b2a3a;}
+  .btn.check{background:#f0b429;box-shadow:0 5px 0 #8a6408;}
+  .btn.reset{background:#c9d6df;box-shadow:0 5px 0 #4b6272;}
+  .message-box{margin-top:12px;text-align:center;font-weight:600;font-size:.95rem;min-height:32px;padding:6px 12px;border-radius:30px;background:#e1ecf3;color:#0f3d52;}
+  .message-box.success{background:#b9e6b9;color:#1d5e1d;}
+  .message-box.error{background:#f7c6c6;color:#9e2b2b;}
+  
+  @media(max-width:900px){
+    .game-area{flex-direction:column;align-items:center;gap:16px;}
+    .clues{max-width:100%;width:100%;min-width:0;}
+  }
+  @media(max-width:600px){
+    .container{padding:12px;border-radius:18px;}
+    .cell{width:24px;height:24px;}
+    .cell input{font-size:.85rem;}
+    .number-badge{font-size:.45rem;}
+    h1{font-size:1.1rem;}
+    .subhead{font-size:.75rem;}
+    .clue-list li{font-size:.75rem;}
+    .btn{padding:10px 20px;font-size:.9rem;min-width:100px;}
+  }
+  @media(max-width:380px){
+    .cell{width:21px;height:21px;}
+    .cell input{font-size:.75rem;}
+    .number-badge{font-size:.4rem;}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🇷🇺 Безопасность России начинается с нас</h1>
+  <div class="subhead">разгадай кроссворд — проверь свою готовность</div>
+  
+  <div class="game-area">
+    <div class="grid-wrapper">
+      <div class="crossword-grid" id="crosswordGrid"></div>
+    </div>
+    
+    <div class="clues">
+      <div class="clue-section">
+        <h3>➡️ По горизонтали</h3>
+        <ul class="clue-list" id="acrossClues"></ul>
+      </div>
+      <div class="clue-section">
+        <h3>⬇️ По вертикали</h3>
+        <ul class="clue-list" id="downClues"></ul>
+      </div>
+    </div>
+  </div>
+  
+  <div class="buttons">
+    <button class="btn check" id="checkBtn">✅ Проверить</button>
+    <button class="btn reset" id="resetBtn">🔄 Сбросить</button>
+  </div>
+  <div class="message-box" id="messageBox">Заполни все клетки и нажми «Проверить»</div>
+</div>
+
+<script>
+// --- БАЗА СЛОВ ---
+const POOL = [
+  {text:'ПАТРИОТ',   clue:'Человек, преданный Отечеству'},
+  {text:'ОБОРОНА',   clue:'Защита страны от нападения'},
+  {text:'ТРЕВОГА',   clue:'Сигнал опасности'},
+  {text:'РОДИНА',    clue:'Страна, где родился'},
+  {text:'РУБЕЖ',     clue:'Оборонительная линия'},
+  {text:'АРМИЯ',     clue:'Вооружённые силы'},
+  {text:'МУЖЕСТВО',  clue:'Стойкость и храбрость'},
+  {text:'ЗАЩИТА',    clue:'Охрана государства'},
+  {text:'ЗАКОН',     clue:'Обязательный нормативный акт'},
+  {text:'ЩИТ',       clue:'Символ обороны'},
+  {text:'ГРАНИЦА',   clue:'Линия между государствами'},
+  {text:'ГЕРОЙ',     clue:'Совершивший подвиг'},
+  {text:'ОТВАГА',    clue:'Смелость и решительность'},
+  {text:'ОРДЕН',     clue:'Государственная награда'},
+  {text:'ЧЕСТЬ',     clue:'Достоинство и верность долгу'},
+  {text:'ДОЛГ',      clue:'Обязанность перед Родиной'},
+  {text:'СИГНАЛ',    clue:'Знак для передачи информации'},
+  {text:'ПОМОЩЬ',    clue:'Поддержка в трудной ситуации'},
+  {text:'ФЛАГ',      clue:'Государственный символ'},
+  {text:'ГЕРБ',      clue:'Официальная эмблема'},
+  {text:'ПОБЕДА',    clue:'Успех в битве'},
+  {text:'ОТЧИЗНА',   clue:'Родина, Отечество'},
+  {text:'ЕДИНСТВО',  clue:'Сплочённость народа'},
+  {text:'БЕЗОПАСНОСТЬ', clue:'Состояние защищённости'},
+  {text:'ЗАКОННОСТЬ',clue:'Соблюдение законов'},
+  {text:'ПОРЯДОК',   clue:'Организованность, дисциплина'},
+  {text:'ВОИН',      clue:'Защитник, солдат'},
+  {text:'СЛУЖБА',    clue:'Выполнение воинского долга'},
+  {text:'ПРИСЯГА',   clue:'Клятва верности'},
+  {text:'МИР',       clue:'Отсутствие войны'},
+  {text:'ДРУЖБА',    clue:'Взаимная поддержка'},
+  {text:'ВОЛЯ',      clue:'Свобода и решимость'},
+  {text:'СИЛА',      clue:'Мощь, способность защитить'},
+  {text:'СЛАВА',     clue:'Признание заслуг'},
+  {text:'ПАМЯТЬ',    clue:'Сохранение истории'},
+  {text:'ВЕТЕРАН',   clue:'Опытный защитник'},
+  {text:'РАЗВЕДКА',  clue:'Сбор сведений о противнике'},
+  {text:'ТЫЛ',       clue:'Часть страны за линией фронта'},
+  {text:'НАДЕЖДА',   clue:'Вера в лучшее'},
+  {text:'ВЕРНОСТЬ',  clue:'Преданность делу'}
+];
+
+const SIZE = 22;
+const TARGET = 15;
+
+function shuffle(arr){
+  const a = arr.slice();
+  for (let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function tryLayout(selected){
+  const grid = Array.from({length:SIZE},()=>Array(SIZE).fill(null));
+  const starts = new Set();
+  const placed = [];
+
+  function canPlace(word,row,col,dir){
+    const len = word.length;
+    if (dir==='across' && col+len > SIZE) return false;
+    if (dir==='down'   && row+len > SIZE) return false;
+    if (row<0||col<0) return false;
+
+    let inter = 0;
+    for (let i=0;i<len;i++){
+      const r = dir==='across'?row:row+i;
+      const c = dir==='across'?col+i:col;
+      const cur = grid[r][c];
+      if (cur!==null){
+        if (cur!==word[i]) return false;
+        inter++;
+        if (inter>1) return false;
+      } else {
+        if (dir==='across'){
+          if (r>0 && grid[r-1][c]!==null) return false;
+          if (r<SIZE-1 && grid[r+1][c]!==null) return false;
+        } else {
+          if (c>0 && grid[r][c-1]!==null) return false;
+          if (c<SIZE-1 && grid[r][c+1]!==null) return false;
+        }
+      }
+    }
+    if (dir==='across'){
+      if (col>0 && grid[row][col-1]!==null) return false;
+      if (col+len<SIZE && grid[row][col+len]!==null) return false;
+    } else {
+      if (row>0 && grid[row-1][col]!==null) return false;
+      if (row+len<SIZE && grid[row+len][col]!==null) return false;
+    }
+    if (starts.has(row+','+col)) return false;
+    if (placed.length>0 && inter===0) return false;
+    return true;
+  }
+
+  function place(word,row,col,dir){
+    for (let i=0;i<word.length;i++){
+      const r = dir==='across'?row:row+i;
+      const c = dir==='across'?col+i:col;
+      grid[r][c] = word[i];
+    }
+    starts.add(row+','+col);
+    placed.push({word,row,col,dir});
+  }
+
+  const first = selected[0].text;
+  place(first, Math.floor(SIZE/2), Math.floor(SIZE/2)-Math.floor(first.length/2), 'across');
+
+  const remaining = selected.slice(1);
+  for (const w of remaining){
+    const word = w.text;
+    let best = null;
+    for (let r=0;r<SIZE;r++){
+      for (let c=0;c<SIZE;c++){
+        for (const dir of ['across','down']){
+          if (canPlace(word,r,c,dir)){
+            let score = 0;
+            for (let i=0;i<word.length;i++){
+              const rr = dir==='across'?r:r+i;
+              const cc = dir==='across'?c+i:c;
+              if (grid[rr][cc]!==null) score += 10;
+            }
+            score -= Math.abs(r-Math.floor(SIZE/2)) + Math.abs(c-Math.floor(SIZE/2));
+            if (!best || score > best.score) best = {r,c,dir,score};
+          }
+        }
+      }
+    }
+    if (best) place(word,best.r,best.c,best.dir);
+    else return {grid:null,placed,missing:word};
+  }
+  return {grid,placed,missing:null};
+}
+
+let result = null;
+let attempts = 0;
+const MAX_ATTEMPTS = 500;
+
+while (attempts < MAX_ATTEMPTS && !result){
+  attempts++;
+  const shuffled = shuffle(POOL);
+  for (let take=0; take<=POOL.length-TARGET; take++){
+    const subset = shuffled.slice(take, take+TARGET);
+    const sorted = subset.slice().sort((a,b)=>b.text.length - a.text.length);
+    const r = tryLayout(sorted);
+    if (r.grid){
+      result = r;
+      break;
+    }
+  }
+}
+
+if (!result) {
+  document.getElementById('messageBox').textContent = "Ошибка генерации, обновите страницу.";
+} else {
+  let minR=SIZE, maxR=0, minC=SIZE, maxC=0;
+  for (let r=0;r<SIZE;r++) for (let c=0;c<SIZE;c++){
+    if (result.grid[r][c]!==null){
+      minR=Math.min(minR,r); maxR=Math.max(maxR,r);
+      minC=Math.min(minC,c); maxC=Math.max(maxC,c);
+    }
+  }
+  const ROWS = maxR-minR+1, COLS = maxC-minC+1;
+  const solution = [];
+  for (let r=minR;r<=maxR;r++){
+    const row = [];
+    for (let c=minC;c<=maxC;c++) row.push(result.grid[r][c]);
+    solution.push(row);
+  }
+
+  const placed = result.placed;
+  const rawWords = placed.map(p => ({
+    dir: p.dir,
+    row: p.row - minR,
+    col: p.col - minC,
+    text: p.word,
+    clue: POOL.find(x => x.text === p.word).clue
+  }));
+
+  const starts = new Set();
+  for (let r=0;r<ROWS;r++){
+    for (let c=0;c<COLS;c++){
+      if (solution[r][c]===null) continue;
+      const isStartAcross = (c===0 || solution[r][c-1]===null) && (c+1<COLS && solution[r][c+1]!==null);
+      const isStartDown   = (r===0 || solution[r-1][c]===null) && (r+1<ROWS && solution[r+1][c]!==null);
+      if (isStartAcross || isStartDown) starts.add(r+','+c);
+    }
+  }
+  
+  const sortedStarts = Array.from(starts).map(s => {
+    const [r,c] = s.split(',').map(Number);
+    return {r,c};
+  }).sort((a,b)=>a.r-b.r || a.c-b.c);
+  
+  const idMap = new Map();
+  sortedStarts.forEach((pos,i) => idMap.set(pos.r+','+pos.c, i+1));
+  
+  const words = rawWords.map(w => ({...w, id: idMap.get(w.row+','+w.col)}))
+                        .filter(w=>w.id)
+                        .sort((a,b)=>a.id-b.id);
+
+  const gridEl = document.getElementById('crosswordGrid');
+  const acrossEl = document.getElementById('acrossClues');
+  const downEl = document.getElementById('downClues');
+  const msg = document.getElementById('messageBox');
+
+  gridEl.style.gridTemplateColumns = `repeat(${COLS}, 30px)`;
+
+  // Вспомогательная функция для поиска следующей клетки в слове
+  function getNextCell(r, c, dir) {
+    if (dir === 'across') return { r, c: c + 1 };
+    else return { r: r + 1, c };
+  }
+
+  function renderGrid() {
+    gridEl.innerHTML = '';
+    for (let r=0;r<ROWS;r++){
+      for (let c=0;c<COLS;c++){
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        if (solution[r][c]===null){
+          cell.classList.add('black');
+        } else {
+          const inp = document.createElement('input');
+          inp.type = 'text';
+          inp.maxLength = 1;
+          inp.dataset.r = r;
+          inp.dataset.c = c;
+          
+          // Автопереход при вводе
+          inp.addEventListener('input', e => {
+            const val = e.target.value.toUpperCase();
+            e.target.value = val;
+
+            if (val) {
+              // Определяем, в каком слове мы находимся (по горизонтали или вертикали)
+              let dir = 'across';
+              const isAcross = (c === 0 || solution[r][c-1] === null) && (c + 1 < COLS && solution[r][c+1] !== null);
+              const isDown   = (r === 0 || solution[r-1][c] === null) && (r + 1 < ROWS && solution[r+1][c] !== null);
+
+              // Если клетка является началом и горизонтального, и вертикального слова, 
+              // оставляем 'across' по умолчанию, но если это только вертикальное — меняем
+              if (isDown && !isAcross) dir = 'down';
+              
+              // Ищем следующую клетку, куда можно перейти
+              let nr = r, nc = c;
+              let found = false;
+
+              // Идем вперёд по направлению слова, пока не найдем свободную или не выйдем
+              while (true) {
+                const next = getNextCell(nr, nc, dir);
+                nr = next.r;
+                nc = next.c;
+
+                // Если вышли за пределы сетки или встретили черную клетку — стоп
+                if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS || solution[nr][nc] === null) {
+                  break;
+                }
+                
+                // Нашли клетку, куда можно перейти
+                found = true;
+                break;
+              }
+
+              // Если следующая клетка найдена — переводим фокус
+              if (found) {
+                const nextInp = gridEl.children[nr * COLS + nc].querySelector('input');
+                if (nextInp) {
+                  nextInp.focus();
+                }
+              }
+            }
+          });
+
+          inp.addEventListener('keydown', onKey);
+          cell.appendChild(inp);
+        }
+        gridEl.appendChild(cell);
+      }
+    }
+    words.forEach(w => {
+      const cell = gridEl.children[w.row * COLS + w.col];
+      if (cell){
+        const badge = document.createElement('span');
+        badge.className = 'number-badge';
+        badge.textContent = w.id;
+        cell.appendChild(badge);
+      }
+    });
+  }
+
+  function onKey(e){
+    const inp = e.target;
+    const r = +inp.dataset.r, c = +inp.dataset.c;
+    const moves = {ArrowRight:[0,1], ArrowLeft:[0,-1], ArrowDown:[1,0], ArrowUp:[-1,0]};
+    if (moves[e.key]){
+      e.preventDefault();
+      const [dr, dc] = moves[e.key];
+      const nr = r+dr, nc = c+dc;
+      if (nr>=0 && nr<ROWS && nc>=0 && nc<COLS && solution[nr][nc]!==null){
+        gridEl.children[nr * COLS + nc].querySelector('input').focus();
+      }
+    } else if (e.key === 'Backspace' && !inp.value) {
+      // Если нажали backspace в пустой клетке — переходим на предыдущую
+      // Определяем направление (по умолчанию across)
+      let dir = 'across';
+      const isAcross = (c === 0 || solution[r][c-1] === null) && (c + 1 < COLS && solution[r][c+1] !== null);
+      const isDown   = (r === 0 || solution[r-1][c] === null) && (r + 1 < ROWS && solution[r+1][c] !== null);
+      if (isDown && !isAcross) dir = 'down';
+      
+      let pr = r, pc = c;
+      if (dir === 'across') pc--;
+      else pr--;
+      
+      if (pr >= 0 && pr < ROWS && pc >= 0 && pc < COLS && solution[pr][pc] !== null) {
+        const prevInp = gridEl.children[pr * COLS + pc].querySelector('input');
+        if (prevInp) {
+          prevInp.focus();
+          prevInp.value = ''; // сразу стираем предыдущую букву
+        }
+      }
+    }
+  }
+
+  function renderClues(){
+    acrossEl.innerHTML = '';
+    downEl.innerHTML = '';
+    words.forEach(w => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="clue-num">${w.id}</span><span>${w.clue} (${w.text.length})</span>`;
+      (w.dir === 'across' ? acrossEl : downEl).appendChild(li);
+    });
+  }
+
+  function check(){
+    let filled = true, correct = true;
+    for (let r=0;r<ROWS;r++){
+      for (let c=0;c<COLS;c++){
+        if (solution[r][c]===null) continue;
+        const inp = gridEl.children[r * COLS + c].querySelector('input');
+        const val = inp.value.trim().toUpperCase();
+        if (!val){ filled=false; correct=false; }
+        else if (val !== solution[r][c]) correct = false;
+      }
+    }
+    if (!filled){ msg.textContent = '❌ Заполните все клетки!'; msg.className = 'message-box error'; }
+    else if (correct){ msg.textContent = '✅ Молодец! Всё верно! Безопасность России начинается с нас!'; msg.className = 'message-box success'; }
+    else { msg.textContent = '❌ Есть ошибки. Попробуй ещё раз.'; msg.className = 'message-box error'; }
+  }
+
+  function reset(){
+    gridEl.querySelectorAll('input').forEach(i => i.value = '');
+    msg.textContent = 'Кроссворд сброшен. Заполни клетки заново.';
+    msg.className = 'message-box';
+  }
+
+  document.getElementById('checkBtn').addEventListener('click', check);
+  document.getElementById('resetBtn').addEventListener('click', reset);
+
+  renderGrid();
+  renderClues();
+}
+</script>
+</body>
+</html>
