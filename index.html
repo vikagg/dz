@@ -88,7 +88,6 @@
 </div>
 
 <script>
-// --- БАЗА СЛОВ ---
 const POOL = [
   {text:'ПАТРИОТ',   clue:'Человек, преданный Отечеству'},
   {text:'ОБОРОНА',   clue:'Защита страны от нападения'},
@@ -137,10 +136,7 @@ const TARGET = 15;
 
 function shuffle(arr){
   const a = arr.slice();
-  for (let i=a.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [a[i],a[j]] = [a[j],a[i]];
-  }
+  for (let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; }
   return a;
 }
 
@@ -227,19 +223,14 @@ function tryLayout(selected){
 
 let result = null;
 let attempts = 0;
-const MAX_ATTEMPTS = 500;
-
-while (attempts < MAX_ATTEMPTS && !result){
+while (attempts < 500 && !result){
   attempts++;
   const shuffled = shuffle(POOL);
   for (let take=0; take<=POOL.length-TARGET; take++){
     const subset = shuffled.slice(take, take+TARGET);
     const sorted = subset.slice().sort((a,b)=>b.text.length - a.text.length);
     const r = tryLayout(sorted);
-    if (r.grid){
-      result = r;
-      break;
-    }
+    if (r.grid){ result = r; break; }
   }
 }
 
@@ -299,7 +290,9 @@ if (!result) {
 
   gridEl.style.gridTemplateColumns = `repeat(${COLS}, 30px)`;
 
-  // Вспомогательная функция для поиска следующей клетки в слове
+  let currentDirection = 'across'; // Текущее направление ввода
+  let activeRow = -1, activeCol = -1; // Текущая клетка
+
   function getNextCell(r, c, dir) {
     if (dir === 'across') return { r, c: c + 1 };
     else return { r: r + 1, c };
@@ -320,47 +313,65 @@ if (!result) {
           inp.dataset.r = r;
           inp.dataset.c = c;
           
-          // Автопереход при вводе
+          // При клике на клетку определяем, в каком слове мы находимся
+          inp.addEventListener('focus', (e) => {
+            const r = +e.target.dataset.r;
+            const c = +e.target.dataset.c;
+
+            // Если мы уже в этой клетке, переключаем направление (если возможно)
+            if (activeRow === r && activeCol === c) {
+              const isAcross = (c === 0 || solution[r][c-1] === null) && (c + 1 < COLS && solution[r][c+1] !== null);
+              const isDown   = (r === 0 || solution[r-1][c] === null) && (r + 1 < ROWS && solution[r+1][c] !== null);
+              if (isAcross && isDown) {
+                currentDirection = (currentDirection === 'across') ? 'down' : 'across';
+              }
+            } else {
+              // Мы перешли на новую клетку. Определяем направление, если есть выбор
+              const isAcross = (c === 0 || solution[r][c-1] === null) && (c + 1 < COLS && solution[r][c+1] !== null);
+              const isDown   = (r === 0 || solution[r-1][c] === null) && (r + 1 < ROWS && solution[r+1][c] !== null);
+              
+              // Если мы зашли по горизонтали/вертикали и в этом направлении есть слово — используем его
+              if (isAcross && !isDown) currentDirection = 'across';
+              else if (!isAcross && isDown) currentDirection = 'down';
+              // Иначе оставляем текущее направление, если оно подходит, или выбираем 'across'
+              else if (isAcross && isDown) {
+                 // Оставляем текущее, если оно допустимо, иначе across
+                 if (currentDirection === 'down') {
+                   // проверим, есть ли буквы вниз
+                   if (!(r+1 < ROWS && solution[r+1][c] !== null)) currentDirection = 'across';
+                 } else {
+                   if (!(c+1 < COLS && solution[r][c+1] !== null)) currentDirection = 'down';
+                 }
+              }
+            }
+            activeRow = r; activeCol = c;
+          });
+
           inp.addEventListener('input', e => {
             const val = e.target.value.toUpperCase();
             e.target.value = val;
 
             if (val) {
-              // Определяем, в каком слове мы находимся (по горизонтали или вертикали)
-              let dir = 'across';
-              const isAcross = (c === 0 || solution[r][c-1] === null) && (c + 1 < COLS && solution[r][c+1] !== null);
-              const isDown   = (r === 0 || solution[r-1][c] === null) && (r + 1 < ROWS && solution[r+1][c] !== null);
-
-              // Если клетка является началом и горизонтального, и вертикального слова, 
-              // оставляем 'across' по умолчанию, но если это только вертикальное — меняем
-              if (isDown && !isAcross) dir = 'down';
+              const r = +e.target.dataset.r;
+              const c = +e.target.dataset.c;
               
-              // Ищем следующую клетку, куда можно перейти
               let nr = r, nc = c;
               let found = false;
-
-              // Идем вперёд по направлению слова, пока не найдем свободную или не выйдем
-              while (true) {
-                const next = getNextCell(nr, nc, dir);
+              
+              // Ищем следующую клетку
+              while(true) {
+                const next = getNextCell(nr, nc, currentDirection);
                 nr = next.r;
                 nc = next.c;
-
-                // Если вышли за пределы сетки или встретили черную клетку — стоп
-                if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS || solution[nr][nc] === null) {
-                  break;
-                }
                 
-                // Нашли клетку, куда можно перейти
+                if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS || solution[nr][nc] === null) break;
                 found = true;
                 break;
               }
 
-              // Если следующая клетка найдена — переводим фокус
               if (found) {
                 const nextInp = gridEl.children[nr * COLS + nc].querySelector('input');
-                if (nextInp) {
-                  nextInp.focus();
-                }
+                if (nextInp) nextInp.focus();
               }
             }
           });
@@ -386,30 +397,26 @@ if (!result) {
     const inp = e.target;
     const r = +inp.dataset.r, c = +inp.dataset.c;
     const moves = {ArrowRight:[0,1], ArrowLeft:[0,-1], ArrowDown:[1,0], ArrowUp:[-1,0]};
+    
     if (moves[e.key]){
       e.preventDefault();
       const [dr, dc] = moves[e.key];
       const nr = r+dr, nc = c+dc;
       if (nr>=0 && nr<ROWS && nc>=0 && nc<COLS && solution[nr][nc]!==null){
+        // При ручном перемещении стрелками меняем направление на соответствующее
+        currentDirection = (dr !== 0) ? 'down' : 'across';
         gridEl.children[nr * COLS + nc].querySelector('input').focus();
       }
     } else if (e.key === 'Backspace' && !inp.value) {
-      // Если нажали backspace в пустой клетке — переходим на предыдущую
-      // Определяем направление (по умолчанию across)
-      let dir = 'across';
-      const isAcross = (c === 0 || solution[r][c-1] === null) && (c + 1 < COLS && solution[r][c+1] !== null);
-      const isDown   = (r === 0 || solution[r-1][c] === null) && (r + 1 < ROWS && solution[r+1][c] !== null);
-      if (isDown && !isAcross) dir = 'down';
-      
       let pr = r, pc = c;
-      if (dir === 'across') pc--;
+      if (currentDirection === 'across') pc--;
       else pr--;
       
       if (pr >= 0 && pr < ROWS && pc >= 0 && pc < COLS && solution[pr][pc] !== null) {
         const prevInp = gridEl.children[pr * COLS + pc].querySelector('input');
         if (prevInp) {
           prevInp.focus();
-          prevInp.value = ''; // сразу стираем предыдущую букву
+          prevInp.value = ''; 
         }
       }
     }
